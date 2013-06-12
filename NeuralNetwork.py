@@ -3,26 +3,28 @@ from pygame.locals import *
 pygame.init()
 screen = pygame.display.set_mode((640,480))
 
-CREATURE_COUNT = 20
-NEURON_COUNT = 20
-SECONDS_PER_CREATURE = 0.05
-STEPS_PER_SIMULATION = 10
-CHANCE_OF_MUTATION = 0.01
+CREATURE_COUNT = 10
+NEURON_COUNT = 10
+STEPS_PER_SIMULATION = 3
+CHANCE_OF_MUTATION = 0.1
 AMMOUNT_OF_MUTATION = 2
-SECONDS_TO_RUN = 1
+SECONDS_TO_RUN = 2
+INITIAL_ERROR = 1000
+inputDataSet = [1]
+outputDataSet = [1]
 
 class creature:
      def __init__(self, noOfNeurons):
-          self.error = 0
+          self.error = INITIAL_ERROR
           self.neuronList = list()
           self.synapseList = list()
           for n in range(noOfNeurons):
                X = int(320+200*math.cos(n*2*math.pi/(noOfNeurons)))
                Y = int(240+200*math.sin(n*2*math.pi/(noOfNeurons)))
                if (n == 0):
-                    color = (0,random.randint(0,255),0)
+                    color = (50,255,0)
                elif (n == 1):
-                    color = (random.randint(0,255),0,0)
+                    color = (255,50,0)
                else:
                     color = (random.randint(0,200),random.randint(0,200),random.randint(0,255))
                radius = 15
@@ -72,8 +74,8 @@ def drawCreature(creature):
           text2 = font.render(str(round(n.boxThreshold,2)), 1, (10, 10, 10))
           text3 = font.render("Top number is neuron value", 1, (10, 10, 10))
           text4 = font.render("Bottom number is neuron threshold", 1, (10, 10, 10))
-          textpos1 = text.get_rect()
-          textpos2 = text.get_rect()
+          textpos1 = text1.get_rect()
+          textpos2 = text2.get_rect()
           textpos1.centerx = n.X
           textpos1.centery = n.Y
           textpos2.centerx = n.X
@@ -86,13 +88,15 @@ def drawCreature(creature):
 
 def stepCreature(creature):
      for n in creature.neuronList:
-          #if n.time > n.timeThreashold:     '''add this in to have neurons require a reuptake time between fires'''
-               #if n.box > n.boxThreshold:   '''add this in to have neurons fire instead of run constantly'''
+          '''if (n.time > n.timeThreashold):
+               if (n.box > n.boxThreshold):'''
+          #=================
           sList = findSynapses(creature,n)
           for s in sList:
-               s.neuron2.inbox += n.fireStrength * n.box * s.weight
+               s.neuron2.inbox += n.fireStrength * s.weight * n.box
           n.time = 0
           n.box = 0
+          #=================
      for n in creature.neuronList:
           n.time += 1
           n.box += n.inbox
@@ -111,16 +115,21 @@ def simulateCreature (creature, noOfSteps, inputNeuron, inputValue, outputNeuron
      creature.error = 0
      for step in range(noOfSteps):
           creature.neuronList[inputNeuron].box = inputValue
+          creature.neuronList[inputNeuron].inbox = 0
           creature = stepCreature(creature)
+          creature.neuronList[inputNeuron].box = inputValue
+          creature.neuronList[inputNeuron].inbox = 0
      creature.error += abs(outputValue - creature.neuronList[outputNeuron].box)
+     creature.neuronList[inputNeuron].inbox = 0
      creature.neuronList[inputNeuron].box = inputValue
+     #print creature.error
      return creature
 
 def trainPopulation(population, inputDataSet, outputDataSet): #data sets are array of the same length
      for c in population:
           for i in range(len(inputDataSet)):
                inD = inputDataSet[i]
-               outD = inputDataSet[i]
+               outD = outputDataSet[i]
                c = simulateCreature(c, STEPS_PER_SIMULATION, 0, inD, 1, outD)
      return population
 
@@ -191,11 +200,12 @@ def repopulate(population):
 
 #create a list of creatures
 population = generateStartingPopulation()
-inputDataSet = [1]
-outputDataSet = [1]
 stopTime = time.time()+SECONDS_TO_RUN
 
+counting = 1
 while time.time()<stopTime:
+     print "generation", counting
+     counting+=1
      #mutate all properties of all creatures in population with CHANCE_OF_MUTATION
      popultion = mutatePopulation( population, CHANCE_OF_MUTATION, AMMOUNT_OF_MUTATION )
      #train all creatures on a data set
@@ -206,25 +216,30 @@ while time.time()<stopTime:
      population = pruneUnfitCreatures(population, averageError)
      #crossbreed randomly chosen parents from the remaining population and append them to population until at CREATURE_COUNT
      population = repopulate(population)
-
-     for event in pygame.event.get():
-          if event.type == QUIT:
-               pygame.quit()
-               sys.exit()
-
-          '''
-          elif event.type is pygame.KEYDOWN:
-               keyname = pygame.key.name(event.key)
-               if keyname == "space":
-                    print "space"
-                    draw
-          '''
-
+counting = 1
 bestCreature = population[0]
 for c in population:
      if (c.error < bestCreature.error):
           bestCreature = c
-for step in range(10):
-          bestCreature.neuronList[0].box = inputDataSet[0]
-          bestCreature = stepCreature(creature)
 drawCreature(bestCreature)
+
+# Event loop.
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            pygame.quit()
+            sys.exit()
+            running = False
+        elif event.type is pygame.KEYDOWN:
+            keyname = pygame.key.name(event.key)
+            if keyname == "space":
+                print "frame", counting
+                counting += 1
+                bestCreature.neuronList[0].box = inputDataSet[0]
+                bestCreature.neuronList[0].inbox = 0
+                ### XXX Should be passing a parameter of type create but instead passing the class?
+                bestCreature = stepCreature(bestCreature)
+                bestCreature.neuronList[0].box = inputDataSet[0]
+                bestCreature.neuronList[0].inbox = 0
+                drawCreature(bestCreature)
