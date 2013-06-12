@@ -3,15 +3,15 @@ from pygame.locals import *
 pygame.init()
 screen = pygame.display.set_mode((640,480))
 
-CREATURE_COUNT = 10
-NEURON_COUNT = 10
-STEPS_PER_SIMULATION = 3
+CREATURE_COUNT = 20
+NEURON_COUNT = 4
+STEPS_PER_SIMULATION = 5
 CHANCE_OF_MUTATION = 0.1
 AMMOUNT_OF_MUTATION = 2
-SECONDS_TO_RUN = 2
+SECONDS_TO_RUN = 5
 INITIAL_ERROR = 1000
 inputDataSet = [1]
-outputDataSet = [1]
+outputDataSet = [100]
 
 class creature:
      def __init__(self, noOfNeurons):
@@ -202,10 +202,10 @@ def repopulate(population):
 population = generateStartingPopulation()
 stopTime = time.time()+SECONDS_TO_RUN
 
-counting = 1
+generations = 1
 while time.time()<stopTime:
-     print "generation", counting
-     counting+=1
+     #print "generation:", generations
+     generations+=1
      #mutate all properties of all creatures in population with CHANCE_OF_MUTATION
      popultion = mutatePopulation( population, CHANCE_OF_MUTATION, AMMOUNT_OF_MUTATION )
      #train all creatures on a data set
@@ -216,11 +216,17 @@ while time.time()<stopTime:
      population = pruneUnfitCreatures(population, averageError)
      #crossbreed randomly chosen parents from the remaining population and append them to population until at CREATURE_COUNT
      population = repopulate(population)
+print "generations:", generations
 counting = 1
 bestCreature = population[0]
 for c in population:
      if (c.error < bestCreature.error):
           bestCreature = c
+bestCreature.neuronList[0].box = inputDataSet[0]
+bestCreature.neuronList[0].inbox = 0
+bestCreature = stepCreature(bestCreature)
+bestCreature.neuronList[0].box = inputDataSet[0]
+bestCreature.neuronList[0].inbox = 0
 drawCreature(bestCreature)
 
 # Event loop.
@@ -234,12 +240,15 @@ while running:
         elif event.type is pygame.KEYDOWN:
             keyname = pygame.key.name(event.key)
             if keyname == "space":
-                print "frame", counting
-                counting += 1
-                bestCreature.neuronList[0].box = inputDataSet[0]
-                bestCreature.neuronList[0].inbox = 0
-                ### XXX Should be passing a parameter of type create but instead passing the class?
-                bestCreature = stepCreature(bestCreature)
-                bestCreature.neuronList[0].box = inputDataSet[0]
-                bestCreature.neuronList[0].inbox = 0
-                drawCreature(bestCreature)
+                if counting <= len(inputDataSet)-1:
+                  print "Data Set:", counting+1
+                  bestCreature.neuronList[0].box = inputDataSet[counting]
+                  bestCreature.neuronList[0].inbox = 0
+                  ### XXX Should be passing a parameter of type create but instead passing the class?
+                  bestCreature = stepCreature(bestCreature)
+                  bestCreature.neuronList[0].box = inputDataSet[counting]
+                  bestCreature.neuronList[0].inbox = 0
+                  drawCreature(bestCreature)
+                  counting += 1
+                else:
+                     counting = 0
