@@ -2,15 +2,15 @@ import time, math, random, pygame, os, sys
 from pygame.locals import *
 pygame.init()
 
-CREATURE_COUNT = 20
+CREATURE_COUNT = 10
 NEURON_COUNT = 4
 STEPS_PER_SIMULATION = 1
 CHANCE_OF_MUTATION = .5
 AMMOUNT_OF_MUTATION = 2
-SECONDS_TO_RUN = 2
+SECONDS_TO_RUN = 1
 INITIAL_ERROR = 10**4
-inputDataSet = [1, 2, 3]
-outputDataSet = [10, 20, 30]
+inputDataSet = [1]
+outputDataSet = [10]
 
 class creature:
      def __init__(self, noOfNeurons):
@@ -72,9 +72,6 @@ def drawCreature(creature):
      for n in creature.neuronList:
         neuronMinStrength = min(neuronMinStrength,n.fireStrength)
         neuronMaxStrength = max(neuronMaxStrength,n.fireStrength)
-     print "NMinS=", neuronMinStrength
-     print "NMaxS=", neuronMaxStrength
-     print "difference=", neuronMaxStrength-neuronMinStrength
 
      for s in creature.synapseList:
           normalizedMultiplier = (s.weight - synapseMinWeight)/(synapseMaxWeight - synapseMinWeight)
@@ -82,10 +79,12 @@ def drawCreature(creature):
           pygame.draw.line(screen, (brightness,brightness,0), (s.neuron1.X, s.neuron1.Y), (s.neuron2.X, s.neuron2.Y), 1+int(6*normalizedMultiplier))
 
      for n in creature.neuronList:
-          normalizedMultiplier == (n.fireStrength-neuronMinStrength)/(neuronMaxStrength-neuronMinStrength)
-          print "nM = ", normalizedMultiplier
-          n.radius = 5+int(20*normalizedMultiplier)
-          brightness = int(255 * normalizedMultiplier)
+          numerator = (n.fireStrength-neuronMinStrength)
+          denominator = (neuronMaxStrength-neuronMinStrength)
+          normalizedMultiplier2 = numerator / denominator
+          n.radius = int(5+(20 * normalizedMultiplier2))
+          brightness = int(1+(254 * normalizedMultiplier2))
+          print "brightness:", brightness
           n.color = (0,brightness,brightness)
 
      for n in creature.neuronList:
