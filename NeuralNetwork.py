@@ -4,13 +4,13 @@ pygame.init()
 
 CREATURE_COUNT = 10
 NEURON_COUNT = 4
-STEPS_PER_SIMULATION = 1
+STEPS_PER_SIMULATION = 3
 CHANCE_OF_MUTATION = .5
 AMMOUNT_OF_MUTATION = 2
-SECONDS_TO_RUN = 1
+SECONDS_TO_RUN = 10
 INITIAL_ERROR = 10**4
-inputDataSet = [1]
-outputDataSet = [10]
+inputDataSet = [1,2]
+outputDataSet = [10,20]
 
 class creature:
      def __init__(self, noOfNeurons):
@@ -27,7 +27,7 @@ class creature:
                else:
                     color = (random.randint(0,200),random.randint(0,200),random.randint(0,255))
                radius = 15
-               self.neuronList.append(neuron(X,Y, color, radius))
+               self.neuronList.append( neuron( X,Y,color,radius ) )
           for n in self.neuronList:
                for l in self.neuronList:
                     self.synapseList.append(synapse(n,l))
@@ -109,8 +109,8 @@ def drawCreature(creature):
 
 def stepCreature(creature):
      for n in creature.neuronList:
-         # if (n.time > n.timeThreashold):
-         #      if (n.box > n.boxThreshold):
+          #if (n.time > n.timeThreashold):
+          #     if (n.box > n.boxThreshold):
           #=================
                     sList = findSynapses(creature,n)
                     for s in sList:
