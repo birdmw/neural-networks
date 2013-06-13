@@ -1,17 +1,16 @@
 import time, math, random, pygame, os, sys
 from pygame.locals import *
 pygame.init()
-screen = pygame.display.set_mode((640,480))
 
 CREATURE_COUNT = 20
 NEURON_COUNT = 4
-STEPS_PER_SIMULATION = 5
-CHANCE_OF_MUTATION = 0.1
+STEPS_PER_SIMULATION = 1
+CHANCE_OF_MUTATION = .5
 AMMOUNT_OF_MUTATION = 2
-SECONDS_TO_RUN = 5
-INITIAL_ERROR = 1000
-inputDataSet = [1]
-outputDataSet = [100]
+SECONDS_TO_RUN = 2
+INITIAL_ERROR = 10**4
+inputDataSet = [1, 2, 3]
+outputDataSet = [10, 20, 30]
 
 class creature:
      def __init__(self, noOfNeurons):
@@ -51,29 +50,52 @@ class synapse:
      def __init__(self, N1, N2):
           self.neuron1 = N1
           self.neuron2 = N2
+          self.color = (0,0,0)
           self.weight = random.random()
 
 def drawCreature(creature):
+     screen = pygame.display.set_mode((640,480))
      screen.fill((255,255,255))
+     
      for n in creature.neuronList:
           n.X = int(320+200*math.cos(creature.neuronList.index(n)*2*math.pi/(len(creature.neuronList))))
           n.Y = int(240+200*math.sin(creature.neuronList.index(n)*2*math.pi/(len(creature.neuronList))))
 
+     synapseMinWeight = creature.synapseList[0].weight
+     synapseMaxWeight = creature.synapseList[0].weight
      for s in creature.synapseList:
-          pygame.draw.line(screen, (0,0,0), (s.neuron1.X, s.neuron1.Y), (s.neuron2.X, s.neuron2.Y), 1)
+        synapseMinWeight = min(synapseMinWeight,s.weight)
+        synapseMaxWeight = max(synapseMaxWeight,s.weight)
+
+     neuronMinStrength = creature.neuronList[0].fireStrength
+     neuronMaxStrength = creature.neuronList[0].fireStrength
+     for n in creature.neuronList:
+        neuronMinStrength = min(neuronMinStrength,n.fireStrength)
+        neuronMaxStrength = max(neuronMaxStrength,n.fireStrength)
+     print "NMinS=", neuronMinStrength
+     print "NMaxS=", neuronMaxStrength
+     print "difference=", neuronMaxStrength-neuronMinStrength
+
+     for s in creature.synapseList:
+          normalizedMultiplier = (s.weight - synapseMinWeight)/(synapseMaxWeight - synapseMinWeight)
+          brightness = int(255 * normalizedMultiplier)
+          pygame.draw.line(screen, (brightness,brightness,0), (s.neuron1.X, s.neuron1.Y), (s.neuron2.X, s.neuron2.Y), 1+int(6*normalizedMultiplier))
 
      for n in creature.neuronList:
-          if (n.box>n.boxThreshold):
-               newColor = (int((n.color[0]+255)/2),int((n.color[1]+255)/2),int((n.color[2]+255)/2))
-               pygame.draw.circle(screen, newColor, (n.X,n.Y), n.radius)
-          else:
-               pygame.draw.circle(screen, n.color, (n.X,n.Y), n.radius)
+          normalizedMultiplier == (n.fireStrength-neuronMinStrength)/(neuronMaxStrength-neuronMinStrength)
+          print "nM = ", normalizedMultiplier
+          n.radius = 5+int(20*normalizedMultiplier)
+          brightness = int(255 * normalizedMultiplier)
+          n.color = (0,brightness,brightness)
+
+     for n in creature.neuronList:
+          pygame.draw.circle(screen, n.color, (n.X,n.Y), n.radius)
 
           font = pygame.font.Font(None, 18)
           text1 = font.render(str(round(n.box,2)), 1, (10, 10, 10))
-          text2 = font.render(str(round(n.boxThreshold,2)), 1, (10, 10, 10))
+          text2 = font.render(str(round(n.fireStrength,2)), 1, (10, 10, 10))
           text3 = font.render("Top number is neuron value", 1, (10, 10, 10))
-          text4 = font.render("Bottom number is neuron threshold", 1, (10, 10, 10))
+          text4 = font.render("Bottom number is neuron fire strength", 1, (10, 10, 10))
           textpos1 = text1.get_rect()
           textpos2 = text2.get_rect()
           textpos1.centerx = n.X
@@ -88,14 +110,14 @@ def drawCreature(creature):
 
 def stepCreature(creature):
      for n in creature.neuronList:
-          '''if (n.time > n.timeThreashold):
-               if (n.box > n.boxThreshold):'''
+         # if (n.time > n.timeThreashold):
+         #      if (n.box > n.boxThreshold):
           #=================
-          sList = findSynapses(creature,n)
-          for s in sList:
-               s.neuron2.inbox += n.fireStrength * s.weight * n.box
-          n.time = 0
-          n.box = 0
+                    sList = findSynapses(creature,n)
+                    for s in sList:
+                         s.neuron2.inbox += n.fireStrength * s.weight * n.box
+                    n.time = 0
+                    n.box = 0
           #=================
      for n in creature.neuronList:
           n.time += 1
@@ -112,7 +134,6 @@ def findSynapses (creature, neuron):
      return sList
 
 def simulateCreature (creature, noOfSteps, inputNeuron, inputValue, outputNeuron, outputValue):
-     creature.error = 0
      for step in range(noOfSteps):
           creature.neuronList[inputNeuron].box = inputValue
           creature.neuronList[inputNeuron].inbox = 0
@@ -127,10 +148,12 @@ def simulateCreature (creature, noOfSteps, inputNeuron, inputValue, outputNeuron
 
 def trainPopulation(population, inputDataSet, outputDataSet): #data sets are array of the same length
      for c in population:
-          for i in range(len(inputDataSet)):
-               inD = inputDataSet[i]
-               outD = outputDataSet[i]
-               c = simulateCreature(c, STEPS_PER_SIMULATION, 0, inD, 1, outD)
+          #if c.error == INITIAL_ERROR:
+               c.error = 0
+               for i in range(len(inputDataSet)):
+                    inD = inputDataSet[i]
+                    outD = outputDataSet[i]
+                    c = simulateCreature(c, STEPS_PER_SIMULATION, 0, inD, 1, outD)
      return population
 
 def mate (mother, father):
@@ -200,10 +223,25 @@ def repopulate(population):
 
 #create a list of creatures
 population = generateStartingPopulation()
-stopTime = time.time()+SECONDS_TO_RUN
+startTime = time.time()
+stopTime = startTime+SECONDS_TO_RUN
+runTime = stopTime - startTime
+halfTime = startTime + runTime/2
+now = time.time()
 
 generations = 1
-while time.time()<stopTime:
+print "CHANCE OF MUTATION:", CHANCE_OF_MUTATION
+print "AMMOUNT OF MUTATION:", AMMOUNT_OF_MUTATION
+while now < stopTime:
+     now = time.time()
+     if now > halfTime:
+          CHANCE_OF_MUTATION = CHANCE_OF_MUTATION /2
+          #AMMOUNT_OF_MUTATION = AMMOUNT_OF_MUTATION /2
+          halfTime = (halfTime + stopTime) / 2
+          print "Generation: ", generations
+          print "   chance of mutation:  ", CHANCE_OF_MUTATION
+          print "   ammount of mutation: ", AMMOUNT_OF_MUTATION
+          
      #print "generation:", generations
      generations+=1
      #mutate all properties of all creatures in population with CHANCE_OF_MUTATION
@@ -216,8 +254,7 @@ while time.time()<stopTime:
      population = pruneUnfitCreatures(population, averageError)
      #crossbreed randomly chosen parents from the remaining population and append them to population until at CREATURE_COUNT
      population = repopulate(population)
-print "generations:", generations
-counting = 1
+print "Total Generations:", generations
 bestCreature = population[0]
 for c in population:
      if (c.error < bestCreature.error):
@@ -230,6 +267,8 @@ bestCreature.neuronList[0].inbox = 0
 drawCreature(bestCreature)
 
 # Event loop.
+
+Index = 0
 running = True
 while running:
     for event in pygame.event.get():
@@ -240,15 +279,11 @@ while running:
         elif event.type is pygame.KEYDOWN:
             keyname = pygame.key.name(event.key)
             if keyname == "space":
-                if counting <= len(inputDataSet)-1:
-                  print "Data Set:", counting+1
-                  bestCreature.neuronList[0].box = inputDataSet[counting]
-                  bestCreature.neuronList[0].inbox = 0
-                  ### XXX Should be passing a parameter of type create but instead passing the class?
-                  bestCreature = stepCreature(bestCreature)
-                  bestCreature.neuronList[0].box = inputDataSet[counting]
-                  bestCreature.neuronList[0].inbox = 0
+                  if Index < len(inputDataSet):
+                    print "Input Data Index:", Index+1
+                    simulateCreature (bestCreature, STEPS_PER_SIMULATION, 0, inputDataSet[Index], 1, outputDataSet[Index])
+                    Index += 1
+                  else:
+                    Index = 0
                   drawCreature(bestCreature)
-                  counting += 1
-                else:
-                     counting = 0
+
